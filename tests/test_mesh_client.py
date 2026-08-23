@@ -571,9 +571,10 @@ def test_construction_falls_back_to_env_url(monkeypatch):
 
 
 def test_construction_uses_default_url_when_no_env(monkeypatch):
+    """#548: the fallback is the tailnet IP — the gateway binds no loopback."""
     monkeypatch.delenv("MESH_GATEWAY_URL", raising=False)
     client = MeshClient(node="lab-ovh", token="t", validate_self_name=False)
-    assert client._gateway_url == "http://localhost:8788"
+    assert client._gateway_url == "http://100.107.222.72:8788"
 
 
 def test_self_name_alias_resolves_at_construction(monkeypatch):
