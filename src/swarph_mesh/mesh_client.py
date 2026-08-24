@@ -58,7 +58,12 @@ from swarph_mesh.exceptions import SwarphMeshError
 from swarph_mesh.mesh_types import MeshMessage, MeshPeer
 
 
-DEFAULT_GATEWAY_URL = "http://localhost:8788"
+# TAILNET IP, NOT localhost (card #548; commander 2026-08-21). The mesh-gateway
+# binds HOST=100.107.222.72 ONLY — localhost has never been bound, so this
+# fallback failed as a bare "Connection refused" with no cause named.
+# MESH_GATEWAY_URL (consulted at the call site) is the escape hatch for anyone
+# outside this mesh, and optional inside it.
+DEFAULT_GATEWAY_URL = "http://100.107.222.72:8788"
 GATEWAY_TOKEN_ENV = "MESH_GATEWAY_TOKEN"
 DEFAULT_TIMEOUT_SECONDS = 10.0
 
@@ -189,7 +194,8 @@ class MeshClient:
         validate_self_name: bool = True,
     ):
         """``token`` falls back to ``MESH_GATEWAY_TOKEN`` env. ``gateway_url``
-        falls back to ``MESH_GATEWAY_URL`` env, then ``http://localhost:8788``.
+        falls back to ``MESH_GATEWAY_URL`` env, then the tailnet IP
+        (``http://100.107.222.72:8788`` — the gateway binds no loopback, #548).
 
         Set ``validate_self_name=False`` for test fixtures that need to
         instantiate a client with a mock peer name. Production callers
