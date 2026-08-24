@@ -61,8 +61,41 @@ def test_compute_cost_v4_flash():
 
 
 def test_compute_cost_v4_pro_uses_promo_price():
-    cost = _compute_cost("deepseek-v4-pro", 1_000_000, 1_000_000)
+    """Promo pricing holds BEFORE the verify-after sentinel — with time pinned,
+    because the adapter deliberately flips to normal pricing past it (issue
+    #6's safeguard). Unpinned, this test went red on main the day the
+    sentinel passed (2026-08-08), which is the safeguard WORKING, not a
+    pricing regression."""
+    import datetime as _dt
+
+    import swarph_mesh.adapters.deepseek as deepseek_mod
+
+    class _BeforeSentinel(_dt.date):
+        @classmethod
+        def today(cls):
+            return cls(2026, 8, 1)  # before VERIFY_AFTER (2026-08-08)
+
+    with patch.object(deepseek_mod.datetime, "date", _BeforeSentinel):
+        cost = _compute_cost("deepseek-v4-pro", 1_000_000, 1_000_000)
     assert cost == pytest.approx(0.435 + 0.87)
+
+
+def test_compute_cost_v4_pro_flips_to_normal_price_past_the_sentinel():
+    """The safeguard itself, pinned: past VERIFY_AFTER the adapter returns
+    NORMAL pricing (fail toward over-billing, never silent 4x under-billing)."""
+    import datetime as _dt
+
+    import swarph_mesh.adapters.deepseek as deepseek_mod
+
+    class _AfterSentinel(_dt.date):
+        @classmethod
+        def today(cls):
+            return cls(2026, 8, 9)  # past VERIFY_AFTER (2026-08-08)
+
+    with patch.object(deepseek_mod.datetime, "date", _AfterSentinel):
+        with pytest.warns(UserWarning):
+            cost = _compute_cost("deepseek-v4-pro", 1_000_000, 1_000_000)
+    assert cost == pytest.approx(1.74 + 3.48)
 
 
 def test_compute_cost_legacy_chat_alias():
