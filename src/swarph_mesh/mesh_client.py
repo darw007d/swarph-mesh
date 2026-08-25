@@ -58,12 +58,17 @@ from swarph_mesh.exceptions import SwarphMeshError
 from swarph_mesh.mesh_types import MeshMessage, MeshPeer
 
 
-# TAILNET IP, NOT localhost (card #548; commander 2026-08-21). The mesh-gateway
-# binds HOST=100.107.222.72 ONLY — localhost has never been bound, so this
-# fallback failed as a bare "Connection refused" with no cause named.
-# MESH_GATEWAY_URL (consulted at the call site) is the escape hatch for anyone
-# outside this mesh, and optional inside it.
-DEFAULT_GATEWAY_URL = "http://100.107.222.72:8788"
+# NO HOST DEFAULT (cards #578 / #579, 2026-08-25).
+#
+# #548 put a tailnet IP here on 2026-08-21 for a correct reason: the mesh-gateway
+# never bound localhost, so a loopback fallback failed as a bare "Connection
+# refused" with no cause named. That box was decommissioned 2026-08-25 and the
+# constant became an address that answers nothing — for every installed copy of
+# this package, everywhere.
+#
+# A default that names a machine has that machine's lifetime. So this ships none:
+# resolve from the caller or MESH_GATEWAY_URL, and when both are silent, SAY SO.
+DEFAULT_GATEWAY_URL = ""
 GATEWAY_TOKEN_ENV = "MESH_GATEWAY_TOKEN"
 DEFAULT_TIMEOUT_SECONDS = 10.0
 
@@ -195,7 +200,7 @@ class MeshClient:
     ):
         """``token`` falls back to ``MESH_GATEWAY_TOKEN`` env. ``gateway_url``
         falls back to ``MESH_GATEWAY_URL`` env, then the tailnet IP
-        (``http://100.107.222.72:8788`` — the gateway binds no loopback, #548).
+        (no default ships — set MESH_GATEWAY_URL or pass gateway_url; #578/#579).
 
         Set ``validate_self_name=False`` for test fixtures that need to
         instantiate a client with a mock peer name. Production callers
@@ -218,7 +223,15 @@ class MeshClient:
             gateway_url
             or os.environ.get("MESH_GATEWAY_URL")
             or DEFAULT_GATEWAY_URL
-        )
+        ).strip()
+        if not self._gateway_url:
+            raise ValueError(
+                "MESH_GATEWAY_URL is not set and swarph-mesh ships no default "
+                "gateway host.\n"
+                "  A baked-in address expires the day that box is retired "
+                "(cards #578/#579; it happened on 2026-08-25).\n"
+                "  Pass gateway_url=... or set MESH_GATEWAY_URL=http://<host>:<port>."
+            )
         self._timeout = timeout_seconds
         self._client: Optional[httpx.AsyncClient] = None
 

@@ -570,11 +570,18 @@ def test_construction_falls_back_to_env_url(monkeypatch):
     assert client._gateway_url == "http://custom-gateway:9999"
 
 
-def test_construction_uses_default_url_when_no_env(monkeypatch):
-    """#548: the fallback is the tailnet IP — the gateway binds no loopback."""
+def test_construction_refuses_when_no_env(monkeypatch):
+    """#578/#579 supersede #548's tailnet fallback.
+
+    #548 was right that loopback was the wrong fallback — the gateway binds no
+    localhost. It picked a tailnet IP instead, which worked until that box was
+    decommissioned on 2026-08-25 and every installed copy of this package
+    inherited an address that answers nothing. A published library cannot know
+    any host, so construction now REFUSES with an actionable message.
+    """
     monkeypatch.delenv("MESH_GATEWAY_URL", raising=False)
-    client = MeshClient(node="lab-ovh", token="t", validate_self_name=False)
-    assert client._gateway_url == "http://100.107.222.72:8788"
+    with pytest.raises(ValueError, match="MESH_GATEWAY_URL is not set"):
+        MeshClient(node="lab-ovh", token="t", validate_self_name=False)
 
 
 def test_self_name_alias_resolves_at_construction(monkeypatch):
