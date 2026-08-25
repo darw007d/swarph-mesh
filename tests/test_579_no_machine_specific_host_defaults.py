@@ -71,6 +71,22 @@ def test_loopback_is_deliberately_allowed(tmp_path: Path) -> None:
     assert not _sweep(tmp_path)
 
 
+def test_the_module_default_is_EMPTY_when_the_env_is_unset() -> None:
+    """The property, OBSERVED — not set by the test that checks it.
+
+    swarph-shared's sibling test was proven vacuous by can-fail: it monkeypatched
+    DEFAULT_GATEWAY_URL to "" and then asserted the refusal, so re-introducing a
+    host literal left it green. Reading the shipped constant is what cannot be
+    disarmed that way.
+    """
+    from swarph_mesh import mesh_client
+
+    assert mesh_client.DEFAULT_GATEWAY_URL == "", (
+        f"swarph-mesh ships a gateway host default: "
+        f"{mesh_client.DEFAULT_GATEWAY_URL!r} (#578/#579)"
+    )
+
+
 def test_client_refuses_rather_than_guessing_a_host(monkeypatch: pytest.MonkeyPatch) -> None:
     """The behaviour the constant's removal is FOR.
 
